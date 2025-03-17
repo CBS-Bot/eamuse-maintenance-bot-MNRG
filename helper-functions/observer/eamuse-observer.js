@@ -36,7 +36,7 @@ const toLocaleTimeStringOptionsVerbose = {
 };
 
 const toLocaleTimeStringOptionsShortET = {
-    timeZone: 'America/Chicago',
+    timeZone: 'America/New_York',
     hour: '2-digit',
     minute: '2-digit',
 };
