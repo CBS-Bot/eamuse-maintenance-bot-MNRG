@@ -1,0 +1,31 @@
+name: Docker Runner
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**/README.md'
+
+jobs:
+  run:
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Set Powershell Bypass (Windows Only)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser"
+
+      - name: Run Container
+        run: docker compose up -d --build
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+
+      - name: Cleanup Unused Images
+        run: docker image prune -f
