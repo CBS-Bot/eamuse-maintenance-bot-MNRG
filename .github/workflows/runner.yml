@@ -21,7 +21,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser"
-
+        
+      - name: Make envfile
+        uses: SpicyPizza/create-envfile@v2.0
+        with:
+          envkey_DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          envkey_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          envkey_DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+          file_name: .env
+          
       - name: Run Container
         run: docker compose up -d --build
         env:
