@@ -27,7 +27,7 @@ class ExtendedMaintenanceObserver {
             end: '',
         };
         this.#toLocaleTimeStringOptionsVerbose = {
-            timeZone: 'America/New_York',
+            timeZone: 'America/Chicago',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -45,13 +45,13 @@ class ExtendedMaintenanceObserver {
             minute: '2-digit',
         };
         this.#toLocaleDateStringOptions = {
-            timeZone: 'America/New_York',
+            timeZone: 'America/Chicago',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
         };
         this.#toLocaleTimeStringOptionsDate = {
-            timeZone: 'America/New_York',
+            timeZone: 'America/Chicago',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -291,8 +291,8 @@ class ExtendedMaintenanceObserver {
             end: `${extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET (${extendedMaintenanceDayTimeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
         };
 
-        console.log('maintenance in US/NY starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
-        console.log('maintenance in US/NY ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
+        console.log('maintenance in US/Chicago starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
+        console.log('maintenance in US/Chicago ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
 
         console.log('maintenance in JP/TOKYO starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', { ...this.#toLocaleTimeStringOptionsVerbose, timeZone: 'Asia/Tokyo' }));
         console.log('maintenance in JP/TOKYO ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', { ...this.#toLocaleTimeStringOptionsVerbose, timeZone: 'Asia/Tokyo' }));
