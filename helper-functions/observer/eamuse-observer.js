@@ -27,7 +27,7 @@ function resetFlags() {
 
 // declare reusable options object when .toLocaleTimeString() is called
 const toLocaleTimeStringOptionsVerbose = {
-    timeZone: 'America/New_York',
+    timeZone: 'America/Chicago',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -36,7 +36,7 @@ const toLocaleTimeStringOptionsVerbose = {
 };
 
 const toLocaleTimeStringOptionsShortET = {
-    timeZone: 'America/New_York',
+    timeZone: 'America/Chicago',
     hour: '2-digit',
     minute: '2-digit',
 };
@@ -48,7 +48,7 @@ const toLocaleTimeStringOptionsShortPT = {
 };
 
 const toLocaleDateStringOptions = {
-    timeZone: 'America/New_York',
+    timeZone: 'America/Chicago',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -241,8 +241,8 @@ async function extendedMaintenanceObserver() {
         extendedMaintenancePostedFlags.postedEndedNotice = true;
     }
 
-    console.log('maintenance in US/NY starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', toLocaleTimeStringOptionsVerbose));
-    console.log('maintenance in US/NY ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', toLocaleTimeStringOptionsVerbose));
+    console.log('maintenance in US/Chicago starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', toLocaleTimeStringOptionsVerbose));
+    console.log('maintenance in US/Chicago ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', toLocaleTimeStringOptionsVerbose));
 
     console.log('maintenance in JP/TOKYO starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', { ...toLocaleTimeStringOptionsVerbose, timeZone: 'Asia/Tokyo' }));
     console.log('maintenance in JP/TOKYO ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', { ...toLocaleTimeStringOptionsVerbose, timeZone: 'Asia/Tokyo' }));
