@@ -1,0 +1,13 @@
+services:
+  main:
+    build: .
+    container_name: EamuseSchedule
+    volumes:
+      - ./data:/usr/src/bot/data
+    environment:
+      DISCORD_BOT_TOKEN:
+      DISCORD_CLIENT_ID:
+      DISCORD_GUILD_ID:
+    env_file:
+      - ./.env
+    restart: always
