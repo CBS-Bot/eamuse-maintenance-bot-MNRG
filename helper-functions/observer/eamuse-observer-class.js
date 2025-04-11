@@ -2,7 +2,7 @@
 class ExtendedMaintenanceObserver {
     #toLocaleTimeStringOptionsVerbose;
 
-    #toLocaleTimeStringOptionsShortET;
+    #toLocaleTimeStringOptionsShortCT;
 
     #toLocaleTimeStringOptionsShortPT;
 
@@ -34,8 +34,8 @@ class ExtendedMaintenanceObserver {
             hour: '2-digit',
             minute: '2-digit',
         };
-        this.#toLocaleTimeStringOptionsShortET = {
-            timeZone: 'America/New_York',
+        this.#toLocaleTimeStringOptionsShortCT = {
+            timeZone: 'America/Chicago',
             hour: '2-digit',
             minute: '2-digit',
         };
@@ -69,11 +69,11 @@ class ExtendedMaintenanceObserver {
 
     getMessage(index, dateOfMaintenance, timeStart, timeEnd) {
         // const messageBodyBank = [
-        //     `⚠️ Warning - In THREE days, the e-amusement Service will be undergoing extended maintenance:\n\nMonday, ${dateOfMaintenance}\nBegins: ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT \nEnds: ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
-        //     `⚠️ Warning - The e-amusement Service will be undergoing extended maintenance TOMORROW:\n\nMonday, ${dateOfMaintenance}\nBegins: ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT \nEnds: ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
-        //     `🚨 Alert - In TWO hours, the e-amusement Service will be starting extended maintenance:\n\nBegins: ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT \nEnds: ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
-        //     `🚨 Alert - The e-amusement Service has started extended maintenance. e-amusement is expected to be back online at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
-        //     `⚠️ Notice - The e-amusement Service is expected to be back online in ONE hour, at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
+        //     `⚠️ Warning - In THREE days, the e-amusement Service will be undergoing extended maintenance:\n\nMonday, ${dateOfMaintenance}\nBegins: ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT \nEnds: ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
+        //     `⚠️ Warning - The e-amusement Service will be undergoing extended maintenance TOMORROW:\n\nMonday, ${dateOfMaintenance}\nBegins: ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT \nEnds: ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
+        //     `🚨 Alert - In TWO hours, the e-amusement Service will be starting extended maintenance:\n\nBegins: ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT \nEnds: ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
+        //     `🚨 Alert - The e-amusement Service has started extended maintenance. e-amusement is expected to be back online at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
+        //     `⚠️ Notice - The e-amusement Service is expected to be back online in ONE hour, at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT / ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT`,
         //     '✅ Notice - The e-amusement Service is expected to be back online now',
         // ];
         const messageBodyBank = [
@@ -93,12 +93,12 @@ class ExtendedMaintenanceObserver {
                 attachICS: false,
             },
             {
-                message: `🚨 Alert - The e-amusement Service has started extended maintenance. e-amusement is expected to be back online at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET (${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
+                message: `🚨 Alert - The e-amusement Service has started extended maintenance. e-amusement is expected to be back online at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
                 format: 'ONLY-MESSAGE',
                 attachICS: false,
             },
             {
-                message: `⚠️ Notice - The e-amusement Service is expected to be back online in ONE hour, at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET (${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
+                message: `⚠️ Notice - The e-amusement Service is expected to be back online in ONE hour, at ${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${timeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
                 format: 'ONLY-MESSAGE',
                 attachICS: false,
             },
@@ -287,8 +287,8 @@ class ExtendedMaintenanceObserver {
             dateStartUTC: extendedMaintenanceDayTimeStart,
             dateEndUTC: extendedMaintenanceDayTimeEnd,
             date: `Monday, ${extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsDate)}`,
-            start: `${extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET (${extendedMaintenanceDayTimeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
-            end: `${extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortET)} ET (${extendedMaintenanceDayTimeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
+            start: `${extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${extendedMaintenanceDayTimeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
+            end: `${extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${extendedMaintenanceDayTimeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
         };
 
         console.log('maintenance in US/Chicago starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
