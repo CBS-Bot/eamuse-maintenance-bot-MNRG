@@ -54,7 +54,7 @@ function globalPostAllServers(messagePayload) {
 
     // find a channel called maintenance-reminders and send a test message
     client.guilds.cache.forEach((guild) => {
-        const targetChannel = guild.channels.cache.find((channel) => channel.name === 'maintenance-reminders');
+        const targetChannel = guild.channels.cache.find((channel) => channel.name === 'maplegrove');
         // targetChannel.send(messagePayload.message);
         // eslint-disable-next-line no-unused-expressions
         messagePayload.attachICS
