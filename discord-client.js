@@ -1,4 +1,4 @@
-/* eslint-disable import/extensions  */
+/* eslint-disable import/extensions */
 import * as dotenv from 'dotenv';
 import {
     Client,
