@@ -125,10 +125,6 @@ async function main() {
             name: 'getnextmaintenance',
             description: 'Returns the date and time of the NEXT e-amusement extended maintenance period.',
         },
-        {
-            name: 'doessomethingelse',
-            description: 'Does something else.',
-        },
     ];
 
     try {
