@@ -55,11 +55,18 @@ function globalPostAllServers(messagePayload) {
     // find a channel called maintenance-reminders and send a test message
     client.guilds.cache.forEach((guild) => {
         const targetChannel = guild.channels.cache.find((channel) => channel.name === 'general');
-        // targetChannel.send(messagePayload.message);
-        // eslint-disable-next-line no-unused-expressions
-        messagePayload.attachICS
+        if (!targetChannel || !targetChannel.isTextBased()) {
+            console.warn(`Skipping guild ${guild.id}: no text-based #general channel found.`);
+            return;
+        }
+
+        const messagePromise = messagePayload.attachICS
             ? targetChannel.send({ embeds: [embedReply], files: [icsFilePath] })
             : targetChannel.send({ embeds: [embedReply] });
+
+        messagePromise.catch((error) => {
+            console.error(`Failed to post maintenance message in guild ${guild.id}:`, error);
+        });
     });
 }
 
