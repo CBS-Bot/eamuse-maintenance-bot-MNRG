@@ -10,6 +10,30 @@ class ExtendedMaintenanceObserver {
 
     #toLocaleTimeStringOptionsDate;
 
+    getThirdTuesdayJSTDate(year, month) {
+        const firstDayOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+        while (firstDayOfMonth.getUTCDay() !== 2) {
+            firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() + 1);
+        }
+        firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() + 14);
+        return firstDayOfMonth;
+    }
+
+    getMaintenanceWindowUTC(extendedMaintenanceDayJST) {
+        const maintenanceStartUTC = new Date(extendedMaintenanceDayJST);
+        maintenanceStartUTC.setUTCHours(17, 0, 0, 0);
+        maintenanceStartUTC.setUTCDate(maintenanceStartUTC.getUTCDate() - 1);
+
+        const maintenanceEndUTC = new Date(extendedMaintenanceDayJST);
+        maintenanceEndUTC.setUTCHours(22, 0, 0, 0);
+        maintenanceEndUTC.setUTCDate(maintenanceEndUTC.getUTCDate() - 1);
+
+        return {
+            maintenanceStartUTC,
+            maintenanceEndUTC,
+        };
+    }
+
     constructor() {
         this.extendedMaintenancePostedFlags = {
             posted3DayWarning: false,
@@ -150,27 +174,33 @@ class ExtendedMaintenanceObserver {
 
     extendedMaintenanceObserver(callbackGlobalPostAllServers) {
         let messageBody = '';
-        const referenceDate = new Date();
         const timezoneOffsetJapanUTC = 9;
 
-        // adding 9 to hour count to reflect JST
-        referenceDate.setUTCHours(referenceDate.getUTCHours() + timezoneOffsetJapanUTC);
-        referenceDate.setUTCDate(1);
-        // console.log('reference date before finding tuesday - expected to be the 1st every time: ' ,referenceDate);
+        // create a pseudo-JST date by shifting UTC forward 9 hours and reading UTC fields
+        const currentDate = new Date(Date.now() + (timezoneOffsetJapanUTC * 60 * 60 * 1000));
 
-        // finds first tuesday and sets referenceDate to it
-        while (referenceDate.getUTCDay() !== 2) {
-            referenceDate.setUTCDate(referenceDate.getUTCDate() + 1);
+        let maintenanceYearJST = currentDate.getUTCFullYear();
+        let maintenanceMonthJST = currentDate.getUTCMonth();
+
+        let extendedMaintenanceDay = this.getThirdTuesdayJSTDate(maintenanceYearJST, maintenanceMonthJST);
+        let {
+            maintenanceStartUTC: extendedMaintenanceDayTimeStart,
+            maintenanceEndUTC: extendedMaintenanceDayTimeEnd,
+        } = this.getMaintenanceWindowUTC(extendedMaintenanceDay);
+
+        if (Date.now() > extendedMaintenanceDayTimeEnd.getTime()) {
+            maintenanceMonthJST += 1;
+            if (maintenanceMonthJST > 11) {
+                maintenanceMonthJST = 0;
+                maintenanceYearJST += 1;
+            }
+
+            extendedMaintenanceDay = this.getThirdTuesdayJSTDate(maintenanceYearJST, maintenanceMonthJST);
+            ({
+                maintenanceStartUTC: extendedMaintenanceDayTimeStart,
+                maintenanceEndUTC: extendedMaintenanceDayTimeEnd,
+            } = this.getMaintenanceWindowUTC(extendedMaintenanceDay));
         }
-        // console.log('reference date after finding tuesday - expected to be the first tuesday every time: ',referenceDate);
-
-        // getting extended maintenance day, which is the third tuesday in Japan. Just add 14 to our recently set referenceDate
-        const extendedMaintenanceDay = new Date(referenceDate.setUTCDate(referenceDate.getUTCDate() + 14));
-        // console.log('extended maintenance day in JP', extendedMaintenanceDay);
-
-        // create new time object representing current time in JST
-        const currentDate = new Date();
-        currentDate.setHours(currentDate.getHours() + timezoneOffsetJapanUTC);
         // console.log('current time in JP', currentDate);
 
         // begin date comparisons - Because our extendedMaintenanceDay date object is set on the third tuesday, we can reference our currentDate object to post warnings
@@ -179,13 +209,13 @@ class ExtendedMaintenanceObserver {
         const is3DaysBeforeExtendedMaintenance = extendedMaintenanceDay.getUTCFullYear() === currentDate.getUTCFullYear()
                                           && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                           && (extendedMaintenanceDay.getUTCDate() - currentDate.getUTCDate() === 3)
-                                          && (extendedMaintenanceDay.getUTCHours() === 0)
-                                          && (extendedMaintenanceDay.getUTCMinutes() === 0);
+                                          && (currentDate.getUTCHours() === 0)
+                                          && (currentDate.getUTCMinutes() === 0);
         const is1DayBeforeExtendedMaintenance = extendedMaintenanceDay.getUTCFullYear() === currentDate.getUTCFullYear()
                                           && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                           && (extendedMaintenanceDay.getUTCDate() - currentDate.getUTCDate() === 1)
-                                          && (extendedMaintenanceDay.getUTCHours() === 0)
-                                          && (extendedMaintenanceDay.getUTCMinutes() === 0);
+                                          && (currentDate.getUTCHours() === 0)
+                                          && (currentDate.getUTCMinutes() === 0);
         const isTodayExtendedMaintenance = extendedMaintenanceDay.getUTCFullYear() === currentDate.getUTCFullYear()
                                     && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                     && extendedMaintenanceDay.getUTCDate() === currentDate.getUTCDate();
@@ -199,28 +229,12 @@ class ExtendedMaintenanceObserver {
      * the next time the extendedMaintenanceObserver() will be run, postMessage() will not be run again.
      */
 
-        const is2HoursBeforeExtendedMaintenance = isTodayExtendedMaintenance && (extendedMaintenanceDay.getUTCHours() === 0 && extendedMaintenanceDay.getUTCMinutes() === 0);
-        const isExactlyExtendedMaintenance = isTodayExtendedMaintenance && (extendedMaintenanceDay.getUTCHours() === 2 && extendedMaintenanceDay.getUTCMinutes() === 0);
-        const is1HourBeforeExtendedMaintenanceEnds = isTodayExtendedMaintenance && (extendedMaintenanceDay.getUTCHours() === 6 && extendedMaintenanceDay.getUTCMinutes() === 0);
-        const extendedMaintenanceEnds = isTodayExtendedMaintenance && (extendedMaintenanceDay.getUTCHours() === 7 && extendedMaintenanceDay.getUTCMinutes() < 1);
-        const isPastExtendedMaintenance = isTodayExtendedMaintenance && (extendedMaintenanceDay.getUTCHours() === 7 && extendedMaintenanceDay.getUTCMinutes() >= 1);
-
-        // Create an extended maintenance day time start object and set it to 02:00 JST (17:00 UTC +0)
-        const extendedMaintenanceDayTimeStart = new Date(extendedMaintenanceDay);
-        extendedMaintenanceDayTimeStart.setUTCHours(17, 0, 0, 0);
-
-        // Create an extended maintenance day time end object and set it to 07:00 JST (22:00 UTC +0)
-        const extendedMaintenanceDayTimeEnd = new Date(extendedMaintenanceDay);
-        extendedMaintenanceDayTimeEnd.setUTCHours(22, 0, 0, 0);
-
-        /**
-     * Set the date one day behind to reflect the Monday before the third Tuesday.
-     * These date objects, containing when extended maintenance will begin and end in the US/NY timezone,
-     * will be passed to getMessage(). These will NOT be used to compare extended maintenance dates to current date.
-     */
-
-        extendedMaintenanceDayTimeStart.setDate(extendedMaintenanceDayTimeEnd.getDate() - 1);
-        extendedMaintenanceDayTimeEnd.setDate(extendedMaintenanceDayTimeEnd.getDate() - 1);
+        const is2HoursBeforeExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 0 && currentDate.getUTCMinutes() === 0);
+        const isExactlyExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 2 && currentDate.getUTCMinutes() === 0);
+        const is1HourBeforeExtendedMaintenanceEnds = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 6 && currentDate.getUTCMinutes() === 0);
+        const extendedMaintenanceEnds = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 7 && currentDate.getUTCMinutes() === 0);
+        const isPastExtendedMaintenance = isTodayExtendedMaintenance
+            && (currentDate.getUTCHours() > 7 || (currentDate.getUTCHours() === 7 && currentDate.getUTCMinutes() >= 1));
 
         // checking if conditions we set are true. if they are, set the messageBody, postMessage, and set the flags to true.
         if (is3DaysBeforeExtendedMaintenance) {
