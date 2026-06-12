@@ -18,6 +18,7 @@ dotenv.config();
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
+const TARGET_CHANNEL_NAMES = ['moa-xscape', 'general'];
 
 const client = new Client({
     intents: [
@@ -52,20 +53,22 @@ function globalPostAllServers(messagePayload) {
         embedReply.setFooter({ text: 'created by @anericzhang', iconURL: 'https://pbs.twimg.com/profile_images/1582126074384760856/EoddMKBj_x96.jpg' });
     }
 
-    // find a channel called maintenance-reminders and send a test message
+    // Post to each configured channel name in every guild.
     client.guilds.cache.forEach((guild) => {
-        const targetChannel = guild.channels.cache.find((channel) => channel.name === 'general');
-        if (!targetChannel || !targetChannel.isTextBased()) {
-            console.warn(`Skipping guild ${guild.id}: no text-based #general channel found.`);
-            return;
-        }
+        TARGET_CHANNEL_NAMES.forEach((channelName) => {
+            const targetChannel = guild.channels.cache.find((channel) => channel.name === channelName);
+            if (!targetChannel || !targetChannel.isTextBased()) {
+                console.warn(`Skipping guild ${guild.id}: no text-based #${channelName} channel found.`);
+                return;
+            }
 
-        const messagePromise = messagePayload.attachICS
-            ? targetChannel.send({ embeds: [embedReply], files: [icsFilePath] })
-            : targetChannel.send({ embeds: [embedReply] });
+            const messagePromise = messagePayload.attachICS
+                ? targetChannel.send({ embeds: [embedReply], files: [icsFilePath] })
+                : targetChannel.send({ embeds: [embedReply] });
 
-        messagePromise.catch((error) => {
-            console.error(`Failed to post maintenance message in guild ${guild.id}:`, error);
+            messagePromise.catch((error) => {
+                console.error(`Failed to post maintenance message in guild ${guild.id} channel #${channelName}:`, error);
+            });
         });
     });
 }
