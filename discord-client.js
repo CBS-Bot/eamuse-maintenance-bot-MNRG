@@ -19,6 +19,7 @@ const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
 const TARGET_CHANNEL_NAMES = ['moa-xscape', 'general'];
+const DEBUG_LOGS = process.env.DEBUG_LOGS === 'true';
 
 const client = new Client({
     intents: [
@@ -85,7 +86,9 @@ client.on('ready', () => {
 
 // function to fire any time a message is created
 client.on('messageCreate', (message) => {
-    console.log(message.content);
+    if (DEBUG_LOGS) {
+        console.log(`[messageCreate] ${message.author?.tag || 'unknown'}: ${message.content}`);
+    }
 });
 
 const sendCalendarReminder = new ButtonBuilder()
@@ -98,7 +101,9 @@ const actionRow = new ActionRowBuilder()
 // respond to button click
 client.on('interactionCreate', (interaction) => {
     if (!interaction.isButton()) return;
-    console.log(interaction);
+    if (DEBUG_LOGS) {
+        console.log(`[interactionCreate] button: ${interaction.customId}`);
+    }
     const icsFilePath = generateICS(myObserver.nextMaintenanceDate);
     interaction.reply({ files: [icsFilePath], ephemeral: true });
 });
@@ -125,9 +130,6 @@ client.on('interactionCreate', (interaction) => {
         interaction.reply({ embeds: [embedReply], components: [actionRow], ephemeral: true });
     }
 });
-
-const arrayOfGuilds = client.guilds.cache;
-console.log(arrayOfGuilds);
 
 async function main() {
     const commands = [
