@@ -75,7 +75,7 @@ function globalPostAllServers(messagePayload) {
 
 // start observer function
 // eslint-disable-next-line no-unused-vars
-const interval = setInterval(() => myObserver.extendedMaintenanceObserver(globalPostAllServers), 1000);
+const interval = setInterval(() => myObserver.extendedMaintenanceObserver(globalPostAllServers, client), 1000);
 
 // function to fire after the bot has logged in
 client.on('ready', () => {

@@ -42,6 +42,7 @@ class ExtendedMaintenanceObserver {
             postedBeginsWarning: false,
             postedEndsIn1HourNotice: false,
             postedEndedNotice: false,
+            createdNextMonthDiscordEvent: false,
         };
         this.nextMaintenanceDate = {
             dateStartUTC: new Date(),
@@ -156,6 +157,57 @@ class ExtendedMaintenanceObserver {
     }
 
     /**
+     * Creates a Discord scheduled event for the next maintenance period in all guilds
+     * @param {Client} discordClient - The Discord client instance
+     * @param {Date} maintenanceStartTime - The start time of the maintenance
+     * @param {Date} maintenanceEndTime - The end time of the maintenance
+     * @returns {Promise<void>}
+     */
+    async createDiscordEvent(discordClient, maintenanceStartTime, maintenanceEndTime) {
+        if (!discordClient || !discordClient.guilds) {
+            console.warn('Discord client not available or invalid');
+            return;
+        }
+
+        const eventName = 'e-amusement Extended Maintenance';
+        const eventDescription = 'Scheduled extended maintenance for e-amusement service. Service will be offline during this period.';
+
+        // Iterate through all guilds the bot is in
+        for (const [, guild] of discordClient.guilds.cache) {
+            try {
+                // Check if an event with this name already exists
+                const existingEvents = await guild.scheduledEvents.fetch();
+                const eventExists = existingEvents.some(
+                    (event) => event.name === eventName
+                        && event.scheduledStartTimestamp === maintenanceStartTime.getTime(),
+                );
+
+                if (eventExists) {
+                    console.log(`Event already exists in guild ${guild.name} (${guild.id}), skipping creation`);
+                    continue;
+                }
+
+                // Create the scheduled event
+                const event = await guild.scheduledEvents.create({
+                    name: eventName,
+                    description: eventDescription,
+                    scheduledStartTime: maintenanceStartTime,
+                    scheduledEndTime: maintenanceEndTime,
+                    privacyLevel: 2, // GUILD_ONLY
+                    entityType: 3, // EXTERNAL
+                    entityMetadata: {
+                        location: 'e-amusement Service',
+                    },
+                });
+
+                console.log(`Created Discord event in guild ${guild.name} (${guild.id}): ${event.id}`);
+            } catch (error) {
+                console.error(`Failed to create Discord event in guild ${guild.id}:`, error);
+            }
+        }
+    }
+
+    /**
      * Resets all truth flags used to guard the postTweet() function.
      * @returns {void} - all truth flags from extendedMaintenancePostedFlags will be set to false
      */
@@ -169,10 +221,12 @@ class ExtendedMaintenanceObserver {
      * extendedMaintenanceObserver is called every 6 seconds to create a current Date object to compare to
      * the expected Extended Maintenance day. Extended Maintenance falls on every third Tuesday from 02:00 to 07:00 JST,
      * which falls on the Monday prior from 12:00 - 17:00 EST.
+     * @param {Function} callbackGlobalPostAllServers - Callback function to post messages to Discord
+     * @param {Client} discordClient - Optional Discord client instance for creating events
      * @returns {void}. Sends a Tweet to the eamuse_schedule Twitter account.
      */
 
-    extendedMaintenanceObserver(callbackGlobalPostAllServers) {
+    extendedMaintenanceObserver(callbackGlobalPostAllServers, discordClient) {
         let messageBody = '';
         const timezoneOffsetJapanUTC = 9;
 
@@ -303,6 +357,30 @@ class ExtendedMaintenanceObserver {
             !this.extendedMaintenancePostedFlags.postedEndedNotice && !isPastExtendedMaintenance && this.safePost(callbackGlobalPostAllServers, messageBody);
             // !this.extendedMaintenancePostedFlags.postedEndedNotice && !isPastExtendedMaintenance && postMessage(messageBody);
             this.extendedMaintenancePostedFlags.postedEndedNotice = true;
+
+            // Create Discord event for next month's maintenance if not already created
+            if (!this.extendedMaintenancePostedFlags.createdNextMonthDiscordEvent && discordClient) {
+                let nextMonthYear = maintenanceYearJST;
+                let nextMonthMonth = maintenanceMonthJST + 1;
+
+                if (nextMonthMonth > 11) {
+                    nextMonthMonth = 0;
+                    nextMonthYear += 1;
+                }
+
+                const nextMonthMaintenanceDay = this.getThirdTuesdayJSTDate(nextMonthYear, nextMonthMonth);
+                const {
+                    maintenanceStartUTC: nextMonthStartUTC,
+                    maintenanceEndUTC: nextMonthEndUTC,
+                } = this.getMaintenanceWindowUTC(nextMonthMaintenanceDay);
+
+                // Schedule the Discord event creation as a separate async task
+                this.createDiscordEvent(discordClient, nextMonthStartUTC, nextMonthEndUTC).catch((error) => {
+                    console.error('Error creating Discord event for next month:', error);
+                });
+
+                this.extendedMaintenancePostedFlags.createdNextMonthDiscordEvent = true;
+            }
         }
 
         this.nextMaintenanceDate = {
