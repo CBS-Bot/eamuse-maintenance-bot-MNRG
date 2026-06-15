@@ -188,7 +188,8 @@ class ExtendedMaintenanceObserver {
             maintenanceEndUTC: extendedMaintenanceDayTimeEnd,
         } = this.getMaintenanceWindowUTC(extendedMaintenanceDay);
 
-        if (Date.now() > extendedMaintenanceDayTimeEnd.getTime()) {
+        const nextMonthCutoverTime = extendedMaintenanceDayTimeEnd.getTime() + (60 * 1000);
+        if (Date.now() >= nextMonthCutoverTime) {
             maintenanceMonthJST += 1;
             if (maintenanceMonthJST > 11) {
                 maintenanceMonthJST = 0;
