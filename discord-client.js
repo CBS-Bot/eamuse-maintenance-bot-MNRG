@@ -5,6 +5,7 @@ import {
     GatewayIntentBits,
     REST,
     Routes,
+    ActivityType,
     EmbedBuilder,
     ButtonBuilder,
     ButtonStyle,
@@ -34,6 +35,33 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 // log in and put the bot online. create an instance of the ExtendedMaintenanceObserver.
 client.login(TOKEN);
 const myObserver = new ExtendedMaintenanceObserver();
+let lastPresenceText = '';
+
+function updateBotStatusFromNextMaintenance() {
+    // Make sure the bot's ready before trying to update status
+    if (!client.user) {
+        return;
+    }
+
+    // Get next maintenance date
+    const nextMaintenanceDate = myObserver.nextMaintenanceDate?.date;
+    if (!nextMaintenanceDate) {
+        return;
+    }
+
+    // If the last status hasn't changed, don't update it
+    const presenceText = `Next maintenance: ${nextMaintenanceDate}`;
+    if (presenceText === lastPresenceText) {
+        return;
+    }
+
+    // Set it
+    client.user.setPresence({
+        activities: [{ name: presenceText, type: ActivityType.Playing }],
+        status: 'online',
+    });
+    lastPresenceText = presenceText;
+}
 
 function globalPostAllServers(messagePayload) {
     // TODO: figure out how to get next maintenance date AFTER current has passed. e.g. EM on 2/20/23, EM concludes, user does /getnextmaintenancedate, how do we get the march date?
@@ -76,11 +104,16 @@ function globalPostAllServers(messagePayload) {
 
 // start observer function
 // eslint-disable-next-line no-unused-vars
-const interval = setInterval(() => myObserver.extendedMaintenanceObserver(globalPostAllServers), 1000);
+const interval = setInterval(() => {
+    myObserver.extendedMaintenanceObserver(globalPostAllServers);
+    updateBotStatusFromNextMaintenance();
+}, 1000);
 
 // function to fire after the bot has logged in
 client.on('ready', () => {
     console.log(`${client.user.tag} has logged in`);
+    myObserver.extendedMaintenanceObserver(globalPostAllServers);
+    updateBotStatusFromNextMaintenance();
     // globalPostAllServers(`number of servers this bot is in: ${client.guilds.cache.size}`);
 });
 
