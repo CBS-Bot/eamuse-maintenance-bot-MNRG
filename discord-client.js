@@ -50,7 +50,7 @@ function updateBotStatusFromNextMaintenance() {
     }
 
     // If the last status hasn't changed, don't update it
-    const presenceText = `Next maintenance: ${nextMaintenanceDate}`;
+    const presenceText = `Upcoming: ${nextMaintenanceDate}`;
     if (presenceText === lastPresenceText) {
         return;
     }
