@@ -10,6 +10,8 @@ class ExtendedMaintenanceObserver {
 
     #toLocaleTimeStringOptionsDate;
 
+    #lastLoggedMaintenanceWindowKey;
+
     getThirdTuesdayJSTDate(year, month) {
         const firstDayOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
         while (firstDayOfMonth.getUTCDay() !== 2) {
@@ -80,6 +82,7 @@ class ExtendedMaintenanceObserver {
             month: '2-digit',
             day: '2-digit',
         };
+        this.#lastLoggedMaintenanceWindowKey = '';
     }
 
     /**
@@ -314,12 +317,13 @@ class ExtendedMaintenanceObserver {
             end: `${extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${extendedMaintenanceDayTimeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
         };
 
-        console.log('maintenance in US/Chicago starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
-        console.log('maintenance in US/Chicago ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
-
-        console.log('maintenance in JP/TOKYO starts:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', { ...this.#toLocaleTimeStringOptionsVerbose, timeZone: 'Asia/Tokyo' }));
-        console.log('maintenance in JP/TOKYO ends:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', { ...this.#toLocaleTimeStringOptionsVerbose, timeZone: 'Asia/Tokyo' }));
-        console.log('\n');
+        const currentMaintenanceWindowKey = `${extendedMaintenanceDayTimeStart.getTime()}-${extendedMaintenanceDayTimeEnd.getTime()}`;
+        if (this.#lastLoggedMaintenanceWindowKey !== currentMaintenanceWindowKey) {
+            console.log('Maintenance window updated:');
+            console.log('US/Chicago start:', extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
+            console.log('US/Chicago end:', extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsVerbose));
+            this.#lastLoggedMaintenanceWindowKey = currentMaintenanceWindowKey;
+        }
 
         // check that all flags are true. this will signal that flags are ready to be reset.
         const readyToBeReset = Object.values(this.extendedMaintenancePostedFlags).every((flagValue) => flagValue === true);
