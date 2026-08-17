@@ -110,7 +110,7 @@ const interval = setInterval(() => {
 }, 1000);
 
 // function to fire after the bot has logged in
-client.on('ready', () => {
+client.on('clientReady', () => {
     console.log(`${client.user.tag} has logged in`);
     myObserver.extendedMaintenanceObserver(globalPostAllServers);
     updateBotStatusFromNextMaintenance();
