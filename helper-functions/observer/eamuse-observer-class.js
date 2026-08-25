@@ -213,13 +213,11 @@ class ExtendedMaintenanceObserver {
         const is3DaysBeforeExtendedMaintenance = extendedMaintenanceDay.getUTCFullYear() === currentDate.getUTCFullYear()
                                           && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                           && (extendedMaintenanceDay.getUTCDate() - currentDate.getUTCDate() === 3)
-                                          && (currentDate.getUTCHours() === 0)
-                                          && (currentDate.getUTCMinutes() === 0);
+                                          && (currentDate.getUTCHours() === 0);
         const is1DayBeforeExtendedMaintenance = extendedMaintenanceDay.getUTCFullYear() === currentDate.getUTCFullYear()
                                           && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                           && (extendedMaintenanceDay.getUTCDate() - currentDate.getUTCDate() === 1)
-                                          && (currentDate.getUTCHours() === 0)
-                                          && (currentDate.getUTCMinutes() === 0);
+                                          && (currentDate.getUTCHours() === 0);
         const isTodayExtendedMaintenance = extendedMaintenanceDay.getUTCFullYear() === currentDate.getUTCFullYear()
                                     && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                     && extendedMaintenanceDay.getUTCDate() === currentDate.getUTCDate();
@@ -233,10 +231,10 @@ class ExtendedMaintenanceObserver {
      * the next time the extendedMaintenanceObserver() will be run, postMessage() will not be run again.
      */
 
-        const is2HoursBeforeExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 0 && currentDate.getUTCMinutes() === 0);
-        const isExactlyExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 2 && currentDate.getUTCMinutes() === 0);
-        const is1HourBeforeExtendedMaintenanceEnds = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 6 && currentDate.getUTCMinutes() === 0);
-        const extendedMaintenanceEnds = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 7 && currentDate.getUTCMinutes() === 0);
+        const is2HoursBeforeExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 0);
+        const isExactlyExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 2);
+        const is1HourBeforeExtendedMaintenanceEnds = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 6);
+        const extendedMaintenanceEnds = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 7);
         const isPastExtendedMaintenance = isTodayExtendedMaintenance
             && (currentDate.getUTCHours() > 7 || (currentDate.getUTCHours() === 7 && currentDate.getUTCMinutes() >= 1));
 

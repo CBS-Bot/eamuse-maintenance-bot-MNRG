@@ -37,7 +37,7 @@ client.login(TOKEN);
 const myObserver = new ExtendedMaintenanceObserver();
 let lastPresenceText = '';
 
-function updateBotStatusFromNextMaintenance() {
+function updateBotStatusFromNextMaintenance(force = false) {
     // Make sure the bot's ready before trying to update status
     if (!client.user) {
         return;
@@ -49,9 +49,9 @@ function updateBotStatusFromNextMaintenance() {
         return;
     }
 
-    // If the last status hasn't changed, don't update it
+    // If the last status hasn't changed, don't update it (unless forced)
     const presenceText = `Upcoming: ${nextMaintenanceDate}`;
-    if (presenceText === lastPresenceText) {
+    if (!force && presenceText === lastPresenceText) {
         return;
     }
 
@@ -109,11 +109,17 @@ const interval = setInterval(() => {
     updateBotStatusFromNextMaintenance();
 }, 1000);
 
+// Presence can silently get wiped by Discord on gateway reconnects, so force-refresh it periodically
+// eslint-disable-next-line no-unused-vars
+const presenceRefreshInterval = setInterval(() => {
+    updateBotStatusFromNextMaintenance(true);
+}, 5 * 60 * 1000);
+
 // function to fire after the bot has logged in
 client.on('clientReady', () => {
     console.log(`${client.user.tag} has logged in`);
     myObserver.extendedMaintenanceObserver(globalPostAllServers);
-    updateBotStatusFromNextMaintenance();
+    updateBotStatusFromNextMaintenance(true);
     // globalPostAllServers(`number of servers this bot is in: ${client.guilds.cache.size}`);
 });
 
