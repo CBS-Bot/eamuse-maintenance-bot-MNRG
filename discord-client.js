@@ -64,8 +64,8 @@ function updateBotStatusFromNextMaintenance(force = false) {
 }
 
 function globalPostAllServers(messagePayload) {
-    // TODO: figure out how to get next maintenance date AFTER current has passed. e.g. EM on 2/20/23, EM concludes, user does /getnextmaintenancedate, how do we get the march date?
-    const icsFilePath = generateICS(myObserver.nextMaintenanceDate);
+    const alertContext = `alert=${messagePayload.alertId}; cycle=${messagePayload.maintenanceCycleKey}`;
+    const icsFilePath = messagePayload.attachICS ? generateICS(myObserver.nextMaintenanceDate) : null;
     const embedReply = new EmbedBuilder();
     if (messagePayload.format === 'AS-IS') {
         embedReply.setTitle(messagePayload.message);
@@ -83,21 +83,32 @@ function globalPostAllServers(messagePayload) {
     }
 
     // Post to each configured channel name in every guild.
+    if (client.guilds.cache.size === 0) {
+        console.warn(`[${new Date().toISOString()}] Discord send skipped: ${alertContext}; no guilds cached.`);
+    }
     client.guilds.cache.forEach((guild) => {
         TARGET_CHANNEL_NAMES.forEach((channelName) => {
             const targetChannel = guild.channels.cache.find((channel) => channel.name === channelName);
-            if (!targetChannel || !targetChannel.isTextBased()) {
-                console.warn(`Skipping guild ${guild.id}: no text-based #${channelName} channel found.`);
+            const sendContext = `${alertContext}; guild=${guild.id}; channel=#${channelName}`;
+            if (!targetChannel || !targetChannel.isTextBased() || typeof targetChannel.send !== 'function') {
+                console.warn(`[${new Date().toISOString()}] Discord send skipped: ${sendContext}; no sendable channel found.`);
                 return;
             }
 
-            const messagePromise = messagePayload.attachICS
-                ? targetChannel.send({ embeds: [embedReply], files: [icsFilePath] })
-                : targetChannel.send({ embeds: [embedReply] });
+            console.log(`[${new Date().toISOString()}] Discord send attempt: ${sendContext}`);
+            try {
+                const messagePromise = messagePayload.attachICS
+                    ? targetChannel.send({ embeds: [embedReply], files: [icsFilePath] })
+                    : targetChannel.send({ embeds: [embedReply] });
 
-            messagePromise.catch((error) => {
-                console.error(`Failed to post maintenance message in guild ${guild.id} channel #${channelName}:`, error);
-            });
+                messagePromise.then((message) => {
+                    console.log(`[${new Date().toISOString()}] Discord send confirmed: ${sendContext}; message=${message.id}`);
+                }).catch((error) => {
+                    console.error(`[${new Date().toISOString()}] Discord send failed: ${sendContext}`, error);
+                });
+            } catch (error) {
+                console.error(`[${new Date().toISOString()}] Discord send failed: ${sendContext}`, error);
+            }
         });
     });
 }
@@ -105,6 +116,7 @@ function globalPostAllServers(messagePayload) {
 // start observer function
 // eslint-disable-next-line no-unused-vars
 const interval = setInterval(() => {
+    if (!client.isReady()) return;
     myObserver.extendedMaintenanceObserver(globalPostAllServers);
     updateBotStatusFromNextMaintenance();
 }, 1000);

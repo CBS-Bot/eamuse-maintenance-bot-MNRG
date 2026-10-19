@@ -10,8 +10,16 @@ class ExtendedMaintenanceObserver {
 
     #toLocaleTimeStringOptionsDate;
 
-    #lastLoggedMaintenanceWindowKey;
+#lastLoggedMaintenanceWindowKey;
 
+    // Identify the monthly maintenance period whose alert flags we are tracking.
+    #maintenanceCycleKey;
+
+    // Remember skip reasons already logged so we only print each reason once per cycle.
+    #loggedAlertSkips = new Set();
+
+    // Find the third Tuesday using Japan's calendar year and month (January is month 0).
+    // This date holds calendar fields only; getMaintenanceWindowUTC converts them to real times.
     getThirdTuesdayJSTDate(year, month) {
         const firstDayOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
         while (firstDayOfMonth.getUTCDay() !== 2) {
@@ -21,6 +29,7 @@ class ExtendedMaintenanceObserver {
         return firstDayOfMonth;
     }
 
+    // Convert Tuesday 02:00–07:00 JST to Monday 17:00–22:00 UTC.
     getMaintenanceWindowUTC(extendedMaintenanceDayJST) {
         const maintenanceStartUTC = new Date(extendedMaintenanceDayJST);
         maintenanceStartUTC.setUTCHours(17, 0, 0, 0);
@@ -37,6 +46,7 @@ class ExtendedMaintenanceObserver {
     }
 
     constructor() {
+        // True means we already tried this alert, not that Discord confirmed delivery.
         this.extendedMaintenancePostedFlags = {
             posted3DayWarning: false,
             posted24HourWarning: false,
@@ -86,12 +96,12 @@ class ExtendedMaintenanceObserver {
     }
 
     /**
-     * Returns a relevant warning message for the Twitter/Discord Client to post
-     * @param {number} index - The message bank contains an array of premade tweets to send. Specify an index to select the message
-     * @param {string} dateOfMaintenance - The start date of the maintenance day, passed as a string. must be passed as .toLocaleString('en-US', toLocaleDateStringOptions)
-     * @param {Date} timeStart - The time that extended maintenance starts. Must be passed as a pure date object
-     * @param {Date} timeEnd - The time that extended maintenance ends. Must be passed as a pure date object
-     * @returns {string} - Parsed message that contains the relevant time to the message
+    * Choose an alert message and how Discord should display it.
+    * @param {number} index - Which alert message to use.
+    * @param {string} dateOfMaintenance - The formatted maintenance date (currently unused).
+    * @param {Date} timeStart - The maintenance start time (currently unused).
+    * @param {Date} timeEnd - The maintenance end time shown in some messages.
+    * @returns {Object} The message text, display format, and whether to attach a calendar file.
      */
 
     getMessage(index, dateOfMaintenance, timeStart, timeEnd) {
@@ -140,27 +150,29 @@ class ExtendedMaintenanceObserver {
     }
 
     /**
-     * Helper function to post messageBody. This function is called when all timing conditions are met
-     * @param {string} messageBody - The body message to be sent to Twitter
+    * Print a message and the flags for debugging; this does not send anything to Discord.
+    * @param {Object|string} messageBody - The message to print.
      */
 
     postMessage(messageBody) {
-        // await clientMain.v1.tweet(messageBody);
         console.log('Posted! - ', messageBody);
         console.log('Flags - ', this.extendedMaintenancePostedFlags);
     }
 
+    // Call the posting function and log errors without stopping the observer.
     safePost(callbackGlobalPostAllServers, messageBody) {
         try {
-            callbackGlobalPostAllServers(messageBody);
+            Promise.resolve(callbackGlobalPostAllServers(messageBody)).catch((error) => {
+                console.error(`[${new Date().toISOString()}] Alert callback failed:`, error);
+            });
         } catch (error) {
-            console.error('Error while posting maintenance message:', error);
+            console.error(`[${new Date().toISOString()}] Alert callback failed:`, error);
         }
     }
 
     /**
-     * Resets all truth flags used to guard the postTweet() function.
-     * @returns {void} - all truth flags from extendedMaintenancePostedFlags will be set to false
+    * Uncheck every alert flag so a new maintenance cycle can send its own alerts.
+    * @returns {void}
      */
 
     resetFlags() {
@@ -169,18 +181,19 @@ class ExtendedMaintenanceObserver {
     }
 
     /**
-     * extendedMaintenanceObserver is called every 6 seconds to create a current Date object to compare to
-     * the expected Extended Maintenance day. Extended Maintenance falls on every third Tuesday from 02:00 to 07:00 JST,
-     * which falls on the Monday prior from 12:00 - 17:00 EST.
-     * @returns {void}. Sends a Tweet to the eamuse_schedule Twitter account.
+    * Check once a second for alerts about the third Tuesday's 02:00–07:00 JST maintenance.
+    * The server's local timezone does not affect these checks.
+    * @param {Function} callbackGlobalPostAllServers - The function that sends alerts to Discord.
+    * @returns {void}
      */
 
     extendedMaintenanceObserver(callbackGlobalPostAllServers) {
         let messageBody = '';
         const timezoneOffsetJapanUTC = 9;
 
-        // create a pseudo-JST date by shifting UTC forward 9 hours and reading UTC fields
-        const currentDate = new Date(Date.now() + (timezoneOffsetJapanUTC * 60 * 60 * 1000));
+        // Add 9 hours so UTC getters read Japan's date and time, not the server's local time.
+        const now = Date.now();
+        const currentDate = new Date(now + (timezoneOffsetJapanUTC * 60 * 60 * 1000));
 
         let maintenanceYearJST = currentDate.getUTCFullYear();
         let maintenanceMonthJST = currentDate.getUTCMonth();
@@ -191,8 +204,10 @@ class ExtendedMaintenanceObserver {
             maintenanceEndUTC: extendedMaintenanceDayTimeEnd,
         } = this.getMaintenanceWindowUTC(extendedMaintenanceDay);
 
+        // Keep this month's dates until 07:01 JST so the ended alert has a minute to fire.
+        // After that, use next month's maintenance dates.
         const nextMonthCutoverTime = extendedMaintenanceDayTimeEnd.getTime() + (60 * 1000);
-        if (Date.now() >= nextMonthCutoverTime) {
+        if (now >= nextMonthCutoverTime) {
             maintenanceMonthJST += 1;
             if (maintenanceMonthJST > 11) {
                 maintenanceMonthJST = 0;
@@ -205,11 +220,62 @@ class ExtendedMaintenanceObserver {
                 maintenanceEndUTC: extendedMaintenanceDayTimeEnd,
             } = this.getMaintenanceWindowUTC(extendedMaintenanceDay));
         }
-        // console.log('current time in JP', currentDate);
+        // Use the UTC start time as a unique label for this month's maintenance.
+        // When that label changes, uncheck all alerts, even if some were missed last month.
+        const maintenanceCycleKey = extendedMaintenanceDayTimeStart.toISOString();
+        if (this.#maintenanceCycleKey !== maintenanceCycleKey) {
+            this.resetFlags();
+            this.#loggedAlertSkips.clear();
+            this.#maintenanceCycleKey = maintenanceCycleKey;
+            console.log(`[${new Date(now).toISOString()}] Maintenance cycle ${maintenanceCycleKey}: posting flags reset.`);
+        }
 
-        // begin date comparisons - Because our extendedMaintenanceDay date object is set on the third tuesday, we can reference our currentDate object to post warnings
-        // when getting values, it is mandatory to getUTC__, otherwise it will show in UTC +0 values
-        // calling getUTC__ will provide us with time local to Japan, UTC +9
+        // Save the dates before sending, so even the first alert after startup has the right details.
+        this.nextMaintenanceDate = {
+            dateStartUTC: extendedMaintenanceDayTimeStart,
+            dateEndUTC: extendedMaintenanceDayTimeEnd,
+            date: `Monday, ${extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsDate)}`,
+            start: `${extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${extendedMaintenanceDayTimeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
+            end: `${extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${extendedMaintenanceDayTimeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
+        };
+
+        // Send an alert only if we have not tried it yet; otherwise log the skip once.
+        // The matching alert branch below checks off its flag after this function returns.
+        const postAlert = (flag, payload) => {
+            if (this.extendedMaintenancePostedFlags[flag]) {
+                const skipKey = `${flag}:already-attempted`;
+                if (!this.#loggedAlertSkips.has(skipKey)) {
+                    console.log(`[${new Date(now).toISOString()}] Alert skipped: ${flag}; cycle=${maintenanceCycleKey}; already attempted this cycle.`);
+                    this.#loggedAlertSkips.add(skipKey);
+                }
+                return;
+            }
+            console.log(`[${new Date(now).toISOString()}] Alert attempt: ${flag}; cycle=${maintenanceCycleKey}`);
+            this.safePost(callbackGlobalPostAllServers, { ...payload, alertId: flag, maintenanceCycleKey });
+        };
+
+        // Log missed alert times once. Do not send old warnings when the bot restarts.
+        const hour = 60 * 60 * 1000;
+        const midnightJST = extendedMaintenanceDayTimeStart.getTime() - (2 * hour);
+        const windows = [
+            ['posted3DayWarning', midnightJST - (72 * hour), hour],
+            ['posted24HourWarning', midnightJST - (24 * hour), hour],
+            ['posted2HourWarning', midnightJST, hour],
+            ['postedBeginsWarning', extendedMaintenanceDayTimeStart.getTime(), hour],
+            ['postedEndsIn1HourNotice', extendedMaintenanceDayTimeEnd.getTime() - hour, hour],
+            ['postedEndedNotice', extendedMaintenanceDayTimeEnd.getTime(), 60 * 1000],
+        ];
+        windows.forEach(([flag, start, duration]) => {
+            const skipKey = `${flag}:expired`;
+            if (now >= start + duration && !this.extendedMaintenancePostedFlags[flag]
+                && !this.#loggedAlertSkips.has(skipKey)) {
+                console.warn(`[${new Date(now).toISOString()}] Alert skipped: ${flag}; cycle=${maintenanceCycleKey}; posting window expired without an attempt.`);
+                this.#loggedAlertSkips.add(skipKey);
+            }
+        });
+
+        // Check Japan's calendar date for advance warnings and the maintenance day.
+        // Advance warnings can fire during 00:00–00:59 JST on the matching date.
         const is3DaysBeforeExtendedMaintenance = extendedMaintenanceDay.getUTCFullYear() === currentDate.getUTCFullYear()
                                           && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                           && (extendedMaintenanceDay.getUTCDate() - currentDate.getUTCDate() === 3)
@@ -222,14 +288,8 @@ class ExtendedMaintenanceObserver {
                                     && extendedMaintenanceDay.getUTCMonth() === currentDate.getUTCMonth()
                                     && extendedMaintenanceDay.getUTCDate() === currentDate.getUTCDate();
 
-        /**
-     * begin time comparisons - Because the time portion to extendedMaintenanceDay is set in JST, we can manually check to see if the hours fall on maintenance times
-     * extended maintenance happens from 2am-7am JST
-     * an additional condition, isPastExtendedMaintenance is needed to determine if all the flags are safe to reset
-     * flags are used to guard the postMessage() function. if a tweet has not been posted yet, its flag value will be false.
-     * after a tweet has been posted, the flag value will be set to true.
-     * the next time the extendedMaintenanceObserver() will be run, postMessage() will not be run again.
-     */
+        // Check Japan's clock for the two-hour, started, ending-soon, and ended alerts.
+        // Alerts have an hour to fire, except the ended alert, which has until 07:01 JST.
 
         const is2HoursBeforeExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 0);
         const isExactlyExtendedMaintenance = isTodayExtendedMaintenance && (currentDate.getUTCHours() === 2);
@@ -238,7 +298,7 @@ class ExtendedMaintenanceObserver {
         const isPastExtendedMaintenance = isTodayExtendedMaintenance
             && (currentDate.getUTCHours() > 7 || (currentDate.getUTCHours() === 7 && currentDate.getUTCMinutes() >= 1));
 
-        // checking if conditions we set are true. if they are, set the messageBody, postMessage, and set the flags to true.
+        // Build the matching alert, try sending it once, and check off its flag.
         if (is3DaysBeforeExtendedMaintenance) {
             messageBody = this.getMessage(
                 0,
@@ -246,9 +306,7 @@ class ExtendedMaintenanceObserver {
                 extendedMaintenanceDayTimeStart,
                 extendedMaintenanceDayTimeEnd,
             );
-            // post messageBody if postedFlag value is false
-            !this.extendedMaintenancePostedFlags.posted3DayWarning && this.safePost(callbackGlobalPostAllServers, messageBody);
-            // !this.extendedMaintenancePostedFlags.posted3DayWarning && postMessage(messageBody);
+            postAlert('posted3DayWarning', messageBody);
             this.extendedMaintenancePostedFlags.posted3DayWarning = true;
         } else if (is1DayBeforeExtendedMaintenance) {
             messageBody = this.getMessage(
@@ -257,9 +315,7 @@ class ExtendedMaintenanceObserver {
                 extendedMaintenanceDayTimeStart,
                 extendedMaintenanceDayTimeEnd,
             );
-            // post messageBody if postedFlag value is false
-            !this.extendedMaintenancePostedFlags.posted24HourWarning && this.safePost(callbackGlobalPostAllServers, messageBody);
-            // !this.extendedMaintenancePostedFlags.posted24HourWarning && postMessage(messageBody);
+            postAlert('posted24HourWarning', messageBody);
             this.extendedMaintenancePostedFlags.posted24HourWarning = true;
         } else if (is2HoursBeforeExtendedMaintenance) {
             messageBody = this.getMessage(
@@ -268,9 +324,7 @@ class ExtendedMaintenanceObserver {
                 extendedMaintenanceDayTimeStart,
                 extendedMaintenanceDayTimeEnd,
             );
-            // post messageBody if postedFlag value is false
-            !this.extendedMaintenancePostedFlags.posted2HourWarning && this.safePost(callbackGlobalPostAllServers, messageBody);
-            // !this.extendedMaintenancePostedFlags.posted2HourWarning && postMessage(messageBody);
+            postAlert('posted2HourWarning', messageBody);
             this.extendedMaintenancePostedFlags.posted2HourWarning = true;
         } else if (isExactlyExtendedMaintenance) {
             messageBody = this.getMessage(
@@ -279,9 +333,7 @@ class ExtendedMaintenanceObserver {
                 extendedMaintenanceDayTimeStart,
                 extendedMaintenanceDayTimeEnd,
             );
-            // post messageBody if postedFlag value is false
-            !this.extendedMaintenancePostedFlags.postedBeginsWarning && this.safePost(callbackGlobalPostAllServers, messageBody);
-            // !this.extendedMaintenancePostedFlags.postedBeginsWarning && postMessage(messageBody);
+            postAlert('postedBeginsWarning', messageBody);
             this.extendedMaintenancePostedFlags.postedBeginsWarning = true;
         } else if (is1HourBeforeExtendedMaintenanceEnds) {
             messageBody = this.getMessage(
@@ -290,9 +342,7 @@ class ExtendedMaintenanceObserver {
                 extendedMaintenanceDayTimeStart,
                 extendedMaintenanceDayTimeEnd,
             );
-            // post messageBody if postedFlag value is false
-            !this.extendedMaintenancePostedFlags.postedEndsIn1HourNotice && this.safePost(callbackGlobalPostAllServers, messageBody);
-            // !this.extendedMaintenancePostedFlags.postedEndsIn1HourNotice && postMessage(messageBody);
+            postAlert('postedEndsIn1HourNotice', messageBody);
             this.extendedMaintenancePostedFlags.postedEndsIn1HourNotice = true;
         } else if (extendedMaintenanceEnds) {
             messageBody = this.getMessage(
@@ -301,20 +351,11 @@ class ExtendedMaintenanceObserver {
                 extendedMaintenanceDayTimeStart,
                 extendedMaintenanceDayTimeEnd,
             );
-            // post messageBody if postedFlag value is false
-            !this.extendedMaintenancePostedFlags.postedEndedNotice && !isPastExtendedMaintenance && this.safePost(callbackGlobalPostAllServers, messageBody);
-            // !this.extendedMaintenancePostedFlags.postedEndedNotice && !isPastExtendedMaintenance && postMessage(messageBody);
+            !isPastExtendedMaintenance && postAlert('postedEndedNotice', messageBody);
             this.extendedMaintenancePostedFlags.postedEndedNotice = true;
         }
 
-        this.nextMaintenanceDate = {
-            dateStartUTC: extendedMaintenanceDayTimeStart,
-            dateEndUTC: extendedMaintenanceDayTimeEnd,
-            date: `Monday, ${extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsDate)}`,
-            start: `${extendedMaintenanceDayTimeStart.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${extendedMaintenanceDayTimeStart.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
-            end: `${extendedMaintenanceDayTimeEnd.toLocaleString('en-US', this.#toLocaleTimeStringOptionsShortCT)} CT (${extendedMaintenanceDayTimeEnd.toLocaleTimeString('en-US', this.#toLocaleTimeStringOptionsShortPT)} PT)`,
-        };
-
+        // Print the maintenance dates only when they change.
         const currentMaintenanceWindowKey = `${extendedMaintenanceDayTimeStart.getTime()}-${extendedMaintenanceDayTimeEnd.getTime()}`;
         if (this.#lastLoggedMaintenanceWindowKey !== currentMaintenanceWindowKey) {
             console.log('Maintenance window updated:');
@@ -323,11 +364,6 @@ class ExtendedMaintenanceObserver {
             this.#lastLoggedMaintenanceWindowKey = currentMaintenanceWindowKey;
         }
 
-        // check that all flags are true. this will signal that flags are ready to be reset.
-        const readyToBeReset = Object.values(this.extendedMaintenancePostedFlags).every((flagValue) => flagValue === true);
-
-        // reset the flags, making sure to also check that it's past maintenance.
-        readyToBeReset && isPastExtendedMaintenance && this.resetFlags();
     }
 }
 
